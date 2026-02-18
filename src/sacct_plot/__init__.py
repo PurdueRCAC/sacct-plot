@@ -20,6 +20,9 @@ from cmdkit.cli import Interface
 from cmdkit.config import Configuration, Namespace
 from cmdkit.logging import Logger, level_by_name, logging_styles
 
+# Internal libs
+from sacct_plot.sacct import SacctData
+
 
 # Public interface
 __all__ = ['main', 'SacctPlotApp', '__version__']
@@ -157,7 +160,30 @@ class SacctPlotApp(Application):
     def run(self: SacctPlotApp) -> None:
         """Run the application."""
         log.setLevel(level_by_name[self.log_level.upper()])
-        log.info('sacct-plot is not yet implemented')
+
+        # Build sacct filter options
+        options = {
+            'user': self.user,
+            'account': self.account,
+            'partition': self.partition,
+            'qos': self.qos,
+            'state': self.state,
+            'starttime': self.starttime,
+            'endtime': self.endtime,
+        }
+        options_info = ', '.join(f'{k}={v}' for k, v in options.items() if v is not None) or 'no filters'
+        log.info(f'Scanning jobs with sacct ({options_info})')
+
+        # Fetch data
+        sacct_data = SacctData.from_sacct(**options)
+        log.info(f'Loaded {len(sacct_data.data)} job records')
+
+        if self.data_mode:
+            print(sacct_data.data.to_string())
+            return
+
+        # Sweep + render will be wired in later phases
+        log.info('Sweep and rendering not yet implemented')
 
 
 def main() -> int:

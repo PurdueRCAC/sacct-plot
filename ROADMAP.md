@@ -1,6 +1,6 @@
 ---
 status: in-progress
-current_phase: 2
+current_phase: 3
 last_updated: 2026-02-18
 ---
 
@@ -37,10 +37,10 @@ Detailed implementation plan: <plan:44d0b156-7fab-4fc2-9849-4810d949b806>
 Implement sacct subprocess integration, job record parsing, and parquet caching.
 Add `Start` and `End` timestamps to the sacct output fields.
 
-- [ ] `src/sacct_plot/sacct.py` (JobInfo dataclass, SacctData with from_sacct/from_local/to_local)
-- [ ] Wire `SacctData.from_sacct()` into `SacctPlotApp.run()` with `--data` dump mode
-- [ ] Unit tests: `tests/test_sacct.py` (JobInfo.from_line parsing, GPU extraction from AllocTRES)
-- [ ] Commit: "WIP: sacct data acquisition and caching"
+- [x] `src/sacct_plot/sacct.py` (JobInfo dataclass, SacctData with from_sacct/from_local/to_local)
+- [x] Wire `SacctData.from_sacct()` into `SacctPlotApp.run()` with `--data` dump mode
+- [x] Unit tests: `tests/test_sacct.py` (JobInfo.from_line parsing, GPU extraction from AllocTRES)
+- [x] Commit: "WIP: sacct data acquisition and caching"
 
 ## Phase 3: Event Sweep
 
