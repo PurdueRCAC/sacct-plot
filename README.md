@@ -12,7 +12,7 @@ across accounts, users, and QOS levels.
 ## Install
 
 ```
-uv pip install .
+uv tool install .
 ```
 
 ## Usage

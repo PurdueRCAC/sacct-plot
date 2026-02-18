@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Optional, List, Tuple
 
 # External libs
+import pandas as pd
 from pandas import DataFrame
 from plot_cli.plot import TimeSeriesFigure, generate_time_ticks
 
@@ -44,7 +45,8 @@ def render(
     color_cycle = colors if colors else COLORS
 
     # Convert datetime index to epoch seconds for tplot
-    epochs = df.index.astype('int64') // 10**9
+    # Use precision-agnostic conversion (works with datetime64[ns], [us], [ms])
+    epochs = (df.index - pd.Timestamp('1970-01-01')) // pd.Timedelta('1s')
     min_epoch = float(epochs.min())
     max_epoch = float(epochs.max())
 
