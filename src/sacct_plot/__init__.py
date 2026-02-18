@@ -6,7 +6,7 @@
 
 # Type annotations
 from __future__ import annotations
-from typing import Final
+from typing import Final, List, Optional, Tuple
 
 # Standard libs
 import sys
@@ -56,7 +56,7 @@ Usage:
     {'':>{len(PROGRAM)}} [-S STARTTIME] [-E ENDTIME]
     {'':>{len(PROGRAM)}} [--by {{account,user,qos}}] [--gpu] [--bucket INTERVAL]
     {'':>{len(PROGRAM)}} [--sum | --mean | --max | --min] [--top N]
-    {'':>{len(PROGRAM)}} [--stacked] [--data]
+    {'':>{len(PROGRAM)}} [--stacked] [-c COLORS] [--size W,H] [--data]
     {__doc__}\
 """
 
@@ -86,6 +86,10 @@ Aggregation (with --bucket):
   --max                        Aggregate by max.
   --min                        Aggregate by min.
 
+Formatting:
+  -c, --color        COLORS    Comma-separated color names (e.g. 'blue,red,green').
+      --size         W,H       Plot width and height in characters (default: terminal size).
+
 Output:
   --stacked                    Stacked area view instead of overlaid lines.
   --data                       Dump processed DataFrame instead of plotting.
@@ -95,6 +99,17 @@ General:
   -v, --version                Show version information and exit.
   -h, --help                   Show this help message and exit.\
 """
+
+
+def _color_list(spec: str, sep: str = ',') -> List[str]:
+    """Split comma-separated color names."""
+    return spec.strip().split(sep)
+
+
+def _split_size(spec: str, sep: str = ',') -> Tuple[int, int]:
+    """Split size spec (e.g. '100,20') into (width, height)."""
+    width, height = map(int, spec.strip().split(sep))
+    return width, height
 
 
 class SacctPlotApp(Application):
@@ -153,6 +168,13 @@ class SacctPlotApp(Application):
     data_mode: bool = False
     interface.add_argument('--data', action='store_true', default=False, dest='data_mode')
 
+    # Formatting
+    colors: Optional[List[str]] = None
+    interface.add_argument('-c', '--color', type=_color_list, default=None, dest='colors')
+
+    size: Optional[Tuple[int, int]] = None
+    interface.add_argument('--size', type=_split_size, default=None)
+
     # Logging
     log_level: str = config.log.level.lower()
     log_interface = interface.add_mutually_exclusive_group()
@@ -208,7 +230,8 @@ class SacctPlotApp(Application):
             title += f' (by {self.by})'
         ylabel = resource
 
-        render(alloc, title=title, ylabel=ylabel, stacked=self.stacked)
+        render(alloc, title=title, ylabel=ylabel, stacked=self.stacked,
+               colors=self.colors, size=self.size)
 
 
 def main() -> int:

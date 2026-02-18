@@ -8,6 +8,9 @@
 from __future__ import annotations
 from typing import Optional
 
+# Standard libs
+from datetime import datetime
+
 # External libs
 import pandas as pd
 from pandas import DataFrame, concat
@@ -32,10 +35,13 @@ def compute_allocation(df: DataFrame, metric: str = 'cpu', by: Optional[str] = N
     """
     resource_col = 'ncpus' if metric == 'cpu' else 'gpus'
 
-    # Drop jobs missing start/end timestamps
-    valid = df.dropna(subset=['start', 'end']).copy()
+    # Drop jobs missing start timestamps; treat running jobs (end=NaT) as
+    # still allocating resources through "now".
+    valid = df.dropna(subset=['start']).copy()
     if valid.empty:
         return DataFrame()
+    now = pd.Timestamp(datetime.now())
+    valid['end'] = valid['end'].fillna(now)
 
     # Build event pairs: (time, +delta, [group]) and (time, -delta, [group])
     cols = ['time', 'delta']

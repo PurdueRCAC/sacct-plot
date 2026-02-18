@@ -6,7 +6,7 @@
 
 # Type annotations
 from __future__ import annotations
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 # External libs
 from pandas import DataFrame
@@ -24,6 +24,8 @@ def render(
     title: Optional[str] = None,
     ylabel: Optional[str] = None,
     stacked: bool = False,
+    colors: Optional[List[str]] = None,
+    size: Optional[Tuple[int, int]] = None,
 ) -> None:
     """Render allocation time-series to the terminal.
 
@@ -33,9 +35,13 @@ def render(
         title: Plot title.
         ylabel: Y-axis label (e.g. 'CPUs' or 'GPUs').
         stacked: If True, render stacked area (cumulative); otherwise overlaid lines.
+        colors: Optional list of color names to cycle through.
+        size: Optional (width, height) in characters.
     """
     if df.empty:
         return
+
+    color_cycle = colors if colors else COLORS
 
     # Convert datetime index to epoch seconds for tplot
     epochs = df.index.astype('int64') // 10**9
@@ -72,6 +78,7 @@ def render(
         title=title,
         xlabel=xlabel,
         ylabel=ylabel,
+        size=size,
         x_tick_formatter=tick_formatter,
         x_tick_values=ticks.tick_epochs,
         secondary_xlabel=secondary_xlabel,
@@ -84,12 +91,12 @@ def render(
         # Stacked: plot cumulative sums bottom-up
         cumulative = df[columns].fillna(0).cumsum(axis=1)
         for i, col in enumerate(columns):
-            color = COLORS[i % len(COLORS)]
+            color = color_cycle[i % len(color_cycle)]
             fig.line(x=x, y=cumulative[col].tolist(), color=color, label=str(col))
     else:
         # Overlaid lines (or single series)
         for i, col in enumerate(columns):
-            color = COLORS[i % len(COLORS)]
+            color = color_cycle[i % len(color_cycle)]
             label = str(col) if len(columns) > 1 else None
             fig.line(x=x, y=df[col].fillna(0).tolist(), color=color, label=label)
 
