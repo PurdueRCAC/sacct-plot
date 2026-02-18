@@ -22,6 +22,7 @@ from cmdkit.logging import Logger, level_by_name, logging_styles
 
 # Internal libs
 from sacct_plot.sacct import SacctData
+from sacct_plot.sweep import compute_allocation, apply_bucket, apply_top_n
 
 
 # Public interface
@@ -178,12 +179,29 @@ class SacctPlotApp(Application):
         sacct_data = SacctData.from_sacct(**options)
         log.info(f'Loaded {len(sacct_data.data)} job records')
 
-        if self.data_mode:
-            print(sacct_data.data.to_string())
+        # Compute allocation time-series
+        metric = 'gpu' if self.gpu else 'cpu'
+        alloc = compute_allocation(sacct_data.data, metric=metric, by=self.by)
+        if alloc.empty:
+            log.warning('No valid job records to plot')
             return
 
-        # Sweep + render will be wired in later phases
-        log.info('Sweep and rendering not yet implemented')
+        # Optional bucket rollup
+        if self.bucket:
+            alloc = apply_bucket(alloc, interval=self.bucket, agg=self.agg)
+            log.debug(f'Bucketed to {self.bucket} with {self.agg} aggregation')
+
+        # Optional top-N filtering
+        if self.top and self.by:
+            alloc = apply_top_n(alloc, n=self.top)
+            log.debug(f'Filtered to top {self.top} groups')
+
+        if self.data_mode:
+            print(alloc.to_string())
+            return
+
+        # Rendering will be wired in Phase 4
+        log.info('Rendering not yet implemented')
 
 
 def main() -> int:

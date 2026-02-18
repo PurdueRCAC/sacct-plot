@@ -1,6 +1,6 @@
 ---
 status: in-progress
-current_phase: 3
+current_phase: 4
 last_updated: 2026-02-18
 ---
 
@@ -47,10 +47,10 @@ Add `Start` and `End` timestamps to the sacct output fields.
 Core algorithm — transform job records into an instantaneous allocation time-series
 using the event-based sweep approach.
 
-- [ ] `src/sacct_plot/sweep.py` (compute_allocation, apply_bucket, apply_top_n)
-- [ ] Wire sweep into `SacctPlotApp.run()` (--by, --gpu, --bucket, --top, aggregation flags)
-- [ ] Unit tests: `tests/test_sweep.py` (known jobs → expected step function, groupby, bucket, top-N)
-- [ ] Commit: "WIP: event sweep algorithm"
+- [x] `src/sacct_plot/sweep.py` (compute_allocation, apply_bucket, apply_top_n)
+- [x] Wire sweep into `SacctPlotApp.run()` (--by, --gpu, --bucket, --top, aggregation flags)
+- [x] Unit tests: `tests/test_sweep.py` (known jobs → expected step function, groupby, bucket, top-N)
+- [x] Commit: "WIP: event sweep algorithm"
 
 ## Phase 4: Rendering
 
