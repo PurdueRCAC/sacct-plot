@@ -28,6 +28,7 @@ def render(
     colors: Optional[List[str]] = None,
     size: Optional[Tuple[int, int]] = None,
     grouped: bool = False,
+    legend: str = 'bottomright',
 ) -> None:
     """Render allocation time-series to the terminal.
 
@@ -40,6 +41,7 @@ def render(
         colors: Optional list of color names to cycle through.
         size: Optional (width, height) in characters.
         grouped: If True, always show legend labels (even for a single series).
+        legend: Legend position ('topleft', 'topright', 'bottomleft', 'bottomright').
     """
     if df.empty:
         return
@@ -83,6 +85,7 @@ def render(
         xlabel=xlabel,
         ylabel=ylabel,
         size=size,
+        legend=legend,
         x_tick_formatter=tick_formatter,
         x_tick_values=ticks.tick_epochs,
         secondary_xlabel=secondary_xlabel,

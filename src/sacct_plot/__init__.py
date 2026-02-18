@@ -88,6 +88,7 @@ Aggregation (with --bucket):
 
 Formatting:
   -c, --color        COLORS    Comma-separated color names (e.g. 'blue,red,green').
+  -l, --legend       POS       Legend position (topleft, topright, bottomleft, bottomright).
       --size         W,H       Plot width and height in characters (default: terminal size).
 
 Output:
@@ -172,6 +173,10 @@ class SacctPlotApp(Application):
     colors: Optional[List[str]] = None
     interface.add_argument('-c', '--color', type=_color_list, default=None, dest='colors')
 
+    legend: str = 'bottomright'
+    interface.add_argument('-l', '--legend', type=str, default='bottomright',
+                           choices=['topleft', 'topright', 'bottomleft', 'bottomright'])
+
     size: Optional[Tuple[int, int]] = None
     interface.add_argument('--size', type=_split_size, default=None)
 
@@ -231,7 +236,8 @@ class SacctPlotApp(Application):
         ylabel = resource
 
         render(alloc, title=title, ylabel=ylabel, stacked=self.stacked,
-               colors=self.colors, size=self.size, grouped=bool(self.by))
+               colors=self.colors, size=self.size, grouped=bool(self.by),
+               legend=self.legend)
 
 
 def main() -> int:
