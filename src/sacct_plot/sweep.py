@@ -119,5 +119,5 @@ def apply_top_n(df: DataFrame, n: int) -> DataFrame:
 
     result = df[top_cols].copy()
     if other_cols:
-        result['other'] = df[other_cols].sum(axis=1)
+        result.insert(0, 'other', df[other_cols].sum(axis=1))
     return result
