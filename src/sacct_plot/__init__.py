@@ -23,6 +23,7 @@ from cmdkit.logging import Logger, level_by_name, logging_styles
 # Internal libs
 from sacct_plot.sacct import SacctData
 from sacct_plot.sweep import compute_allocation, apply_bucket, apply_top_n
+from sacct_plot.plot import render
 
 
 # Public interface
@@ -200,8 +201,14 @@ class SacctPlotApp(Application):
             print(alloc.to_string())
             return
 
-        # Rendering will be wired in Phase 4
-        log.info('Rendering not yet implemented')
+        # Build title and labels
+        resource = 'GPUs' if self.gpu else 'CPUs'
+        title = f'Instantaneous {resource} Allocated'
+        if self.by:
+            title += f' (by {self.by})'
+        ylabel = resource
+
+        render(alloc, title=title, ylabel=ylabel, stacked=self.stacked)
 
 
 def main() -> int:

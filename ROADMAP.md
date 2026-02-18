@@ -57,10 +57,10 @@ using the event-based sweep approach.
 Terminal plotting with tplot via plot-cli's TimeSeriesFigure. Overlaid and stacked
 line modes with smart time-axis labels.
 
-- [ ] `src/sacct_plot/plot.py` (render function using TimeSeriesFigure + generate_time_ticks)
-- [ ] Wire render into `SacctPlotApp.run()` (--stacked flag)
-- [ ] Integration tests: `tests/test_cli.py` (help, version, --data mode)
-- [ ] Commit: "WIP: terminal rendering with tplot"
+- [x] `src/sacct_plot/plot.py` (render function using TimeSeriesFigure + generate_time_ticks)
+- [x] Wire render into `SacctPlotApp.run()` (--stacked flag)
+- [x] Integration tests: `tests/test_cli.py` (help, version, --data mode)
+- [x] Commit: "WIP: terminal rendering with tplot"
 
 ## Phase 5: Polish & Release Prep
 
