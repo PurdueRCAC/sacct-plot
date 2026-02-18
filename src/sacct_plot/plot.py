@@ -27,6 +27,7 @@ def render(
     stacked: bool = False,
     colors: Optional[List[str]] = None,
     size: Optional[Tuple[int, int]] = None,
+    grouped: bool = False,
 ) -> None:
     """Render allocation time-series to the terminal.
 
@@ -38,6 +39,7 @@ def render(
         stacked: If True, render stacked area (cumulative); otherwise overlaid lines.
         colors: Optional list of color names to cycle through.
         size: Optional (width, height) in characters.
+        grouped: If True, always show legend labels (even for a single series).
     """
     if df.empty:
         return
@@ -99,7 +101,7 @@ def render(
         # Overlaid lines (or single series)
         for i, col in enumerate(columns):
             color = color_cycle[i % len(color_cycle)]
-            label = str(col) if len(columns) > 1 else None
+            label = str(col) if (grouped or len(columns) > 1) else None
             fig.line(x=x, y=df[col].fillna(0).tolist(), color=color, label=label)
 
     fig.draw()

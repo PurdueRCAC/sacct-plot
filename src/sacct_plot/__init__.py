@@ -231,7 +231,7 @@ class SacctPlotApp(Application):
         ylabel = resource
 
         render(alloc, title=title, ylabel=ylabel, stacked=self.stacked,
-               colors=self.colors, size=self.size)
+               colors=self.colors, size=self.size, grouped=bool(self.by))
 
 
 def main() -> int:
