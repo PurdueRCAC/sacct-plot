@@ -52,11 +52,12 @@ class TestJobInfo:
     """Tests for JobInfo.from_line parsing."""
 
     def test_basic_job(self):
-        line = '12345|user1|account1|8|billing=8,cpu=8,mem=64G|3600|COMPLETED|2026-02-18T10:00:00|2026-02-18T11:00:00'
+        line = '12345|user1|account1|normal|8|billing=8,cpu=8,mem=64G|3600|COMPLETED|2026-02-18T10:00:00|2026-02-18T11:00:00'
         job = JobInfo.from_line(line)
         assert job.job_id == '12345'
         assert job.user == 'user1'
         assert job.account == 'account1'
+        assert job.qos == 'normal'
         assert job.ncpus == 8
         assert job.elapsed_raw == 3600
         assert job.state == 'COMPLETED'
@@ -65,7 +66,7 @@ class TestJobInfo:
         assert job.gpus == 0
 
     def test_gpu_job(self):
-        line = '67890|user2|gpu_account|32|billing=32,cpu=32,gres/gpu=4,mem=256G|7200|COMPLETED|2026-02-18T08:00:00|2026-02-18T10:00:00'
+        line = '67890|user2|gpu_account|gpu|32|billing=32,cpu=32,gres/gpu=4,mem=256G|7200|COMPLETED|2026-02-18T08:00:00|2026-02-18T10:00:00'
         job = JobInfo.from_line(line)
         assert job.ncpus == 32
         assert job.gpus == 4
@@ -73,32 +74,33 @@ class TestJobInfo:
 
     def test_array_job_id(self):
         """Array job IDs with underscores should be split at the dot."""
-        line = '12345_10|user1|acct|4|cpu=4|1800|COMPLETED|2026-02-18T10:00:00|2026-02-18T10:30:00'
+        line = '12345_10|user1|acct|normal|4|cpu=4|1800|COMPLETED|2026-02-18T10:00:00|2026-02-18T10:30:00'
         job = JobInfo.from_line(line)
         assert job.job_id == '12345_10'
 
     def test_step_job_id(self):
         """Job step IDs (12345.batch) should be truncated to the base job ID."""
-        line = '12345.batch|user1|acct|4|cpu=4|1800|COMPLETED|2026-02-18T10:00:00|2026-02-18T10:30:00'
+        line = '12345.batch|user1|acct|normal|4|cpu=4|1800|COMPLETED|2026-02-18T10:00:00|2026-02-18T10:30:00'
         job = JobInfo.from_line(line)
         assert job.job_id == '12345'
 
     def test_pending_job_no_end(self):
-        line = '99999|user1|acct|16|cpu=16|0|PENDING|Unknown|Unknown'
+        line = '99999|user1|acct|normal|16|cpu=16|0|PENDING|Unknown|Unknown'
         job = JobInfo.from_line(line)
         assert job.start is None
         assert job.end is None
         assert job.elapsed_raw == 0
 
     def test_wrong_field_count(self):
-        with pytest.raises(ValueError, match='Expected 9 fields'):
+        with pytest.raises(ValueError, match='Expected 10 fields'):
             JobInfo.from_line('12345|user1|acct|8|cpu=8|3600|COMPLETED')
 
     def test_to_dict(self):
-        line = '12345|user1|acct|8|billing=8,cpu=8,gres/gpu=2,mem=64G|3600|COMPLETED|2026-02-18T10:00:00|2026-02-18T11:00:00'
+        line = '12345|user1|acct|normal|8|billing=8,cpu=8,gres/gpu=2,mem=64G|3600|COMPLETED|2026-02-18T10:00:00|2026-02-18T11:00:00'
         job = JobInfo.from_line(line)
         d = job.to_dict()
         assert d['job_id'] == '12345'
+        assert d['qos'] == 'normal'
         assert d['ncpus'] == 8
         assert d['gpus'] == 2
         assert 'alloc_tres' not in d  # raw field not in dict

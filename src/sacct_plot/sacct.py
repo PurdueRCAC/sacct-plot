@@ -26,7 +26,7 @@ log = Logger.default(name=__name__)
 # Sacct command configuration
 SACCT_BASE: Final[List[str]] = [
     '/usr/bin/sacct', '-aX', '-o',
-    'JobID,User,Account,NCPUS,AllocTRES,ElapsedRaw,State,Start,End',
+    'JobID,User,Account,QOS,NCPUS,AllocTRES,ElapsedRaw,State,Start,End',
     '--parsable2', '--noheader', '--duplicates', '--array',
 ]
 
@@ -41,7 +41,7 @@ SACCT_OPTIONS: Final[Dict[str, str]] = {
 }
 
 SACCT_FIELDS: Final[List[str]] = [
-    'job_id', 'user', 'account', 'ncpus', 'alloc_tres',
+    'job_id', 'user', 'account', 'qos', 'ncpus', 'alloc_tres',
     'elapsed_raw', 'state', 'start', 'end',
 ]
 
@@ -79,6 +79,7 @@ class JobInfo:
     job_id: str
     user: str
     account: str
+    qos: str
     ncpus: int
     alloc_tres: str
     elapsed_raw: int
@@ -95,18 +96,19 @@ class JobInfo:
     def from_line(cls, line: str) -> JobInfo:
         """Create a JobInfo from a pipe-delimited sacct output line."""
         parts = line.strip().split('|')
-        if len(parts) != 9:
-            raise ValueError(f'Expected 9 fields, got {len(parts)}: {line!r}')
+        if len(parts) != 10:
+            raise ValueError(f'Expected 10 fields, got {len(parts)}: {line!r}')
         return cls(
             job_id=parts[0].split('.')[0],
             user=parts[1],
             account=parts[2],
-            ncpus=int(parts[3]),
-            alloc_tres=parts[4],
-            elapsed_raw=int(parts[5]) if parts[5] else 0,
-            state=parts[6],
-            start=_parse_timestamp(parts[7]),
-            end=_parse_timestamp(parts[8]),
+            qos=parts[3],
+            ncpus=int(parts[4]),
+            alloc_tres=parts[5],
+            elapsed_raw=int(parts[6]) if parts[6] else 0,
+            state=parts[7],
+            start=_parse_timestamp(parts[8]),
+            end=_parse_timestamp(parts[9]),
         )
 
     def to_dict(self) -> dict:
@@ -115,6 +117,7 @@ class JobInfo:
             'job_id': self.job_id,
             'user': self.user,
             'account': self.account,
+            'qos': self.qos,
             'ncpus': self.ncpus,
             'gpus': self.gpus,
             'elapsed_raw': self.elapsed_raw,
