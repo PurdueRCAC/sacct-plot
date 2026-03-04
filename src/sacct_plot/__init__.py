@@ -22,7 +22,7 @@ from cmdkit.logging import Logger, level_by_name, logging_styles
 
 # Internal libs
 from sacct_plot.sacct import SacctData
-from sacct_plot.sweep import compute_allocation, apply_bucket, apply_top_n
+from sacct_plot.sweep import compute_allocation, apply_bucket, apply_cumulative, apply_top_n
 from sacct_plot.plot import render
 
 
@@ -55,7 +55,7 @@ Usage:
     {PROGRAM} [-hv] [-u USER] [-A ACCOUNT] [-r PARTITION] [-q QOS] [-s STATE]
     {'':>{len(PROGRAM)}} [-S STARTTIME] [-E ENDTIME]
     {'':>{len(PROGRAM)}} [--by {{account,user,qos}}] [--gpu] [--bucket INTERVAL]
-    {'':>{len(PROGRAM)}} [--sum | --mean | --max | --min] [--top N]
+    {'':>{len(PROGRAM)}} [--sum | --mean | --max | --min] [--cumulative] [--top N]
     {'':>{len(PROGRAM)}} [--stacked] [-c COLORS] [--size W,H] [--data]
     {__doc__}\
 """
@@ -81,10 +81,11 @@ Analysis:
   --top            N           Show only top N groups; collapse rest to "other".
 
 Aggregation (with --bucket):
-  --sum                        Aggregate by sum (default).
-  --mean                       Aggregate by mean.
-  --max                        Aggregate by max.
-  --min                        Aggregate by min.
+  --sum                        Resource-hours per bucket (default).
+  --mean                       Time-weighted average allocation level.
+  --max                        Peak allocation within the bucket.
+  --min                        Minimum allocation within the bucket.
+  --cumulative                 Show running cumulative total.
 
 Formatting:
   -c, --color        COLORS    Comma-separated color names (e.g. 'blue,red,green').
@@ -162,6 +163,9 @@ class SacctPlotApp(Application):
     agg_interface.add_argument('--max', action='store_const', const='max', dest='agg')
     agg_interface.add_argument('--min', action='store_const', const='min', dest='agg')
 
+    cumulative: bool = False
+    interface.add_argument('--cumulative', action='store_true', default=False)
+
     # Output flags
     stacked: bool = False
     interface.add_argument('--stacked', action='store_true', default=False)
@@ -219,6 +223,14 @@ class SacctPlotApp(Application):
             alloc = apply_bucket(alloc, interval=self.bucket, agg=self.agg)
             log.debug(f'Bucketed to {self.bucket} with {self.agg} aggregation')
 
+        # Optional cumulative sum (requires --bucket)
+        if self.cumulative:
+            if not self.bucket:
+                log.warning('--cumulative requires --bucket; ignoring')
+            else:
+                alloc = apply_cumulative(alloc)
+                log.debug('Applied cumulative sum')
+
         # Optional top-N filtering
         if self.top and self.by:
             alloc = apply_top_n(alloc, n=self.top)
@@ -230,10 +242,24 @@ class SacctPlotApp(Application):
 
         # Build title and labels
         resource = 'GPUs' if self.gpu else 'CPUs'
-        title = f'Instantaneous {resource} Allocated'
+        resource_unit = resource  # e.g. 'GPUs'
+        if self.bucket:
+            if self.agg == 'sum':
+                ylabel = f'{resource[:-1]}\u00b7h'
+                title = f'{ylabel} Allocated (per {self.bucket})'
+            elif self.agg == 'mean':
+                ylabel = f'{resource} (avg)'
+                title = f'Average {resource} Allocated (per {self.bucket})'
+            else:
+                ylabel = resource
+                title = f'{self.agg.title()} {resource} Allocated (per {self.bucket})'
+            if self.cumulative:
+                title = f'Cumulative {title.split("(")[0].strip()}'
+        else:
+            title = f'Instantaneous {resource} Allocated'
+            ylabel = resource
         if self.by:
             title += f' (by {self.by})'
-        ylabel = resource
 
         render(alloc, title=title, ylabel=ylabel, stacked=self.stacked,
                colors=self.colors, size=self.size, grouped=bool(self.by),

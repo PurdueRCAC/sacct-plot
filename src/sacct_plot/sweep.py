@@ -84,11 +84,49 @@ def compute_allocation(df: DataFrame, metric: str = 'cpu', by: Optional[str] = N
         return result
 
 
-def apply_bucket(df: DataFrame, interval: str, agg: str = 'sum') -> DataFrame:
-    """Resample the allocation step function to a coarser time grid.
+def _fill_at_boundaries(df: DataFrame, interval: str) -> DataFrame:
+    """Insert bucket boundaries into the step-function index and forward-fill.
 
-    Forward-fills the sparse event data to the bucket grid, then applies
-    the specified aggregation. Never expands to per-second resolution.
+    Ensures every bucket has a valid level at its start, so segments never
+    cross bucket boundaries.
+    """
+    start = df.index.min().floor(interval)
+    end = df.index.max().ceil(interval)
+    boundaries = pd.date_range(start, end, freq=interval)
+    combined = df.index.union(boundaries)
+    return df.reindex(combined).ffill().fillna(0)
+
+
+def _integrate_buckets(df: DataFrame, interval: str) -> DataFrame:
+    """Compute the time-weighted integral of a step function per bucket.
+
+    Each constant segment contributes level × duration (in GPU-seconds).
+    Returns resource-hours per bucket (integral / 3600).
+    """
+    filled = _fill_at_boundaries(df, interval)
+
+    # Forward-looking duration (seconds) from each point to the next
+    idx = filled.index
+    durations = pd.Series(0.0, index=idx)
+    durations.iloc[:-1] = (idx[1:] - idx[:-1]).total_seconds()
+
+    # GPU-seconds per segment = level × duration
+    weighted = filled.multiply(durations, axis=0)
+
+    # Sum per bucket, convert to resource-hours
+    return weighted.resample(interval).sum() / 3600
+
+
+def apply_bucket(df: DataFrame, interval: str, agg: str = 'sum') -> DataFrame:
+    """Aggregate the allocation step function into time buckets.
+
+    For ``sum`` and ``mean`` the step function is properly integrated
+    (level × duration) so values reflect actual resource-time consumed.
+
+    * ``sum``  — resource-hours per bucket (e.g. GPU·h).
+    * ``mean`` — time-weighted average allocation level (e.g. avg GPUs).
+    * ``max``  — peak allocation within the bucket.
+    * ``min``  — minimum allocation within the bucket.
 
     Args:
         df: Time-indexed allocation DataFrame (from compute_allocation).
@@ -97,9 +135,27 @@ def apply_bucket(df: DataFrame, interval: str, agg: str = 'sum') -> DataFrame:
     """
     if df.empty:
         return df
-    resampled = df.resample(interval).agg(agg)
-    resampled = resampled.ffill().fillna(0)
-    return resampled
+
+    if agg == 'sum':
+        result = _integrate_buckets(df, interval)
+    elif agg == 'mean':
+        integral = _integrate_buckets(df, interval)
+        bucket_hours = pd.Timedelta(interval).total_seconds() / 3600
+        result = integral / bucket_hours
+    else:
+        # max / min — forward-fill at boundaries so carried-forward levels
+        # are visible, then take the standard aggregate.
+        filled = _fill_at_boundaries(df, interval)
+        result = filled.resample(interval).agg(agg)
+
+    return result.fillna(0)
+
+
+def apply_cumulative(df: DataFrame) -> DataFrame:
+    """Compute the running cumulative sum of a bucketed DataFrame."""
+    if df.empty:
+        return df
+    return df.cumsum()
 
 
 def apply_top_n(df: DataFrame, n: int) -> DataFrame:
