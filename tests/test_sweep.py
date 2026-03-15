@@ -3,12 +3,13 @@
 
 """Unit tests for the event-sweep algorithm."""
 
-import pytest
-from datetime import datetime
 
+# External libs
+import pytest
 import pandas as pd
 from pandas import DataFrame, Timestamp
 
+# Internal libs
 from sacct_plot.sweep import compute_allocation, apply_bucket, apply_cumulative, apply_top_n
 
 

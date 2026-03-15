@@ -3,11 +3,16 @@
 
 """Shared test fixtures for sacct-plot."""
 
+
+# Type annotations
 from __future__ import annotations
 from typing import Final
+
+# Standard libs
 from pathlib import Path
 import gzip
 
+# External libs
 import pytest
 
 
@@ -46,8 +51,6 @@ def mock_sacct(sacct_fixture_bytes: bytes, monkeypatch: pytest.MonkeyPatch) -> b
             assert len(data.data) > 0
     """
     import sacct_plot.sacct as sacct_module
-
     monkeypatch.setattr(sacct_module, 'check_output', lambda cmd: sacct_fixture_bytes)
     monkeypatch.setattr(sacct_module, 'CACHE_TTL', 0)  # Disable caching
-
     return sacct_fixture_bytes

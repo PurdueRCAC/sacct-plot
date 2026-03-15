@@ -3,9 +3,14 @@
 
 """Unit tests for sacct data parsing."""
 
-import pytest
+
+# Standard libs
 from datetime import datetime
 
+# External libs
+import pytest
+
+# Internal libs
 from sacct_plot.sacct import JobInfo, _parse_gpus, _parse_timestamp
 
 

@@ -138,6 +138,94 @@ mode. Scatter uses braille markers via tplot.
 - [ ] Manual testing on cluster with real sacct data
 - [ ] Squash WIP commits and open PR against main
 
+## Phase 12: Comprehensive Testing Infrastructure
+
+Build layered, automated end-to-end testing that exercises the full CLI pipeline
+— from mock sacct data through sweep/wait computation to terminal rendering —
+without requiring a live cluster. Each layer catches a different class of bug;
+together they give high confidence that flag combinations, data shapes, and visual
+output remain correct across refactors and dependency updates.
+
+### Layer 1 — E2E Data Pipeline (`--data` mode)
+
+The `--data` flag prints the processed DataFrame to stdout, exercising 100% of
+the logic except the final render call. These tests run the full CLI with
+`mock_sacct`, capture stdout, and assert on shape, columns, and values.
+
+- [ ] `tests/test_pipeline.py` — allocation mode scenarios:
+      ungrouped CPU, ungrouped GPU, `--by account`, `--by user`,
+      `--bucket 1d --sum`, `--bucket 1h --mean`, `--top 3`,
+      `--cumulative`, `--all --by account`
+- [ ] `tests/test_pipeline.py` — wait mode scenarios:
+      `--wait` (raw per-job), `--wait --bucket 1h`,
+      `--wait --by user`, `--wait --bucket 1d --mean`
+- [ ] Each test invokes `SacctPlotApp.main()` with `mock_sacct` patched in,
+      captures stdout via `capsys`, parses the table, and asserts:
+      exit code 0, expected column names, non-empty rows, value ranges
+      (e.g. GPU counts ≥ 0, wait times ≥ 0)
+- [ ] Commit: "WIP: e2e data pipeline tests"
+
+### Layer 2 — Render Smoke Tests
+
+Minimal integration tests that run the full CLI *including* the render path.
+They don't validate what the plot looks like — only that the pipeline doesn't
+crash for any supported flag combination.
+
+- [ ] `tests/test_render_smoke.py` — for each major mode (allocation ungrouped,
+      allocation grouped, allocation bucketed, allocation stacked,
+      wait scatter, wait bucketed), invoke the CLI with `mock_sacct`
+      and `--size 80,24` to force a fixed canvas
+- [ ] Assert: exit code 0, stdout is non-empty, no exceptions on stderr
+- [ ] Cover edge cases: empty result set (filter that matches no jobs),
+      single-job dataset, `--top N` where N > number of groups
+- [ ] Commit: "WIP: render smoke tests"
+
+### Layer 3 — Render Structure Tests
+
+Mock `TimeSeriesFigure` (and `render_wait`'s scatter/envelope path once it
+exists) to validate that the render functions receive correct inputs without
+actually drawing anything.
+
+- [ ] `tests/test_render.py` — patch `plot_cli.plot.TimeSeriesFigure` with
+      a recording mock that captures every `.line()` / `.scatter()` call
+- [ ] Allocation mode assertions: number of `.line()` calls matches number
+      of DataFrame columns, each call's `label` matches a column name,
+      color cycle wraps correctly, x-values are epoch seconds,
+      y-values match DataFrame column values
+- [ ] Wait mode assertions: `.scatter()` called for raw dots,
+      `.line()` called for median/p25/p75 envelope when bucketed,
+      y-axis label reflects auto-scaled unit (minutes/hours/days)
+- [ ] Stacked mode assertion: cumulative y-values are monotonically
+      non-decreasing across series at each x-point
+- [ ] Assert `fig.draw()` is called exactly once per render invocation
+- [ ] Commit: "WIP: render structure tests"
+
+### Layer 4 — Golden Snapshot Tests
+
+Capture the full terminal-rendered output (character grid) for key scenarios
+and diff against checked-in golden files. Since tplot renders to a fixed
+character grid at a fixed `--size`, output is deterministic — diffs are
+plain text and show exactly what changed (axis labels, legend entries,
+series shapes).
+
+- [ ] `tests/conftest.py` — add `golden_dir` fixture pointing to
+      `tests/golden/`, add `--update-golden` pytest CLI flag
+      (via `conftest.py` hook) that regenerates golden files in-place
+- [ ] `tests/test_golden.py` — parameterized test: each case is a tuple
+      of (name, cli_args). Invokes CLI with `mock_sacct` + `--size 80,24`,
+      captures stdout, compares against `tests/golden/{name}.txt`.
+      When `--update-golden` is set, writes stdout to the golden file
+      instead of comparing
+- [ ] Initial golden scenarios (allocation mode):
+      `ungrouped_cpu`, `ungrouped_gpu`, `by_account`, `by_user_top3`,
+      `bucketed_1d_sum`, `bucketed_1h_mean`, `cumulative`, `stacked`,
+      `all_by_account`
+- [ ] Initial golden scenarios (wait mode):
+      `wait_scatter`, `wait_bucketed_1h`, `wait_by_user`,
+      `wait_bucketed_mean`
+- [ ] Generate and commit golden files: `tests/golden/*.txt`
+- [ ] Commit: "WIP: golden snapshot test infrastructure and initial snapshots"
+
 ---
 
 ## Design Considerations
@@ -189,6 +277,7 @@ allocated resources (CPUs/GPUs) on Slurm clusters over time, built in Python
 with cmdkit, pandas, and tplot.
 
 Please read:
+- README.md for a high-level overview
 - ROADMAP.md for current status and next tasks
 - The implementation plan referenced in ROADMAP.md for architectural details
 - src/sacct_plot/__init__.py for the Application class and CLI

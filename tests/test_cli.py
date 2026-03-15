@@ -3,9 +3,12 @@
 
 """Integration tests for the sacct-plot CLI."""
 
+
+# Standard libs
 import subprocess
 import sys
 
+# External libs
 import pytest
 
 

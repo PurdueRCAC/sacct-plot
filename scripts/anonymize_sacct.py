@@ -15,11 +15,12 @@ Usage:
     python scripts/anonymize_sacct.py INPUT_FILE OUTPUT_FILE
 """
 
+# Type annotations
 from __future__ import annotations
 
+# Standard libs
 import re
 import sys
-from collections import defaultdict
 
 
 # QOS values that are generic enough to keep as-is
