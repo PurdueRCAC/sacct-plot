@@ -67,15 +67,30 @@ line modes with smart time-axis labels.
 End-to-end testing on a live cluster, README expansion, and preparing for merge
 from wip to main.
 
-- [ ] Manual testing with real sacct data on cluster
-- [ ] README: full usage examples, screenshots
+- [x] Manual testing with real sacct data on cluster (Gautschi, Anvil)
+- [x] README: full usage examples
 - [ ] Squash WIP commits and open PR against main
 
-## Phase 6: Data Acquisition Update
+## Phase 6: Test Fixtures
 
-Add `Submit` timestamp to sacct query for wait time analysis.
+Set up anonymized sacct fixture data and mock infrastructure so all tests
+(existing and new) can run deterministically without a live cluster.
 
 Detailed implementation plan: <plan:bf259d9b-7dc8-4b79-b373-95d0f739bc31>
+
+- [ ] Create `scripts/anonymize_sacct.py` — reads raw sacct output, maps
+      real usernames/accounts/job IDs to anonymized values, preserves timestamps
+      and resource fields, writes pipe-delimited fixture file
+- [ ] Generate fixture: `tests/fixtures/sacct_gpu_3months.txt` (anonymized
+      ~3 months of a busy cluster)
+- [ ] Add `tests/conftest.py` with `mock_sacct` fixture that patches
+      `subprocess.check_output` to return fixture data
+- [ ] Refactor existing tests to use fixture data where applicable
+- [ ] Commit: "WIP: anonymized test fixtures and mock sacct"
+
+## Phase 7: Data Acquisition Update
+
+Add `Submit` timestamp to sacct query for wait time analysis.
 
 - [ ] Add `Submit` to `SACCT_BASE` fields and `SACCT_FIELDS`
 - [ ] Parse `Submit` in `JobInfo.from_line()` (11 fields)
@@ -83,7 +98,7 @@ Detailed implementation plan: <plan:bf259d9b-7dc8-4b79-b373-95d0f739bc31>
 - [ ] Update test fixtures for 11-field format
 - [ ] Commit: "WIP: add Submit timestamp to sacct data"
 
-## Phase 7: `--all` Aggregate Overlay
+## Phase 8: `--all` Aggregate Overlay
 
 Add `--all` flag to overlay the full partition aggregate alongside grouped series.
 Requires `--by`. Fetches the full dataset (dropping the filter for the `--by`
@@ -95,7 +110,7 @@ dimension), computes both per-group and aggregate series, and merges them.
 - [ ] Unit tests: `--all` with `--by user`, interaction with `--top`
 - [ ] Commit: "WIP: --all aggregate overlay"
 
-## Phase 8: Wait Time Computation
+## Phase 9: Wait Time Computation
 
 New `wait.py` module. Computes per-job wait time (start − submit) and optional
 bucketed aggregation with percentile envelope (p25, center, p75).
@@ -106,7 +121,7 @@ bucketed aggregation with percentile envelope (p25, center, p75).
 - [ ] Unit tests: `tests/test_wait.py` (wait computation, bucketing, grouped)
 - [ ] Commit: "WIP: wait time computation"
 
-## Phase 9: Wait Time Rendering
+## Phase 10: Wait Time Rendering
 
 Scatter plot for raw wait time, line chart with percentile envelope for bucketed
 mode. Scatter uses braille markers via tplot.
@@ -117,7 +132,7 @@ mode. Scatter uses braille markers via tplot.
 - [ ] Integration tests for `--wait` mode
 - [ ] Commit: "WIP: wait time rendering"
 
-## Phase 10: Polish & v0.2 Release Prep
+## Phase 11: Polish & v0.2 Release Prep
 
 - [ ] Update AGENTS.md with new architecture
 - [ ] Manual testing on cluster with real sacct data
