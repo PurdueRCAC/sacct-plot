@@ -1,7 +1,7 @@
 ---
 status: in-progress
-current_phase: 6
-last_updated: 2026-03-14
+current_phase: 7
+last_updated: 2026-03-15
 ---
 
 # sacct-plot Roadmap
@@ -78,15 +78,14 @@ Set up anonymized sacct fixture data and mock infrastructure so all tests
 
 Detailed implementation plan: <plan:bf259d9b-7dc8-4b79-b373-95d0f739bc31>
 
-- [ ] Create `scripts/anonymize_sacct.py` — reads raw sacct output, maps
+- [x] Create `scripts/anonymize_sacct.py` — reads raw sacct output, maps
       real usernames/accounts/job IDs to anonymized values, preserves timestamps
       and resource fields, writes pipe-delimited fixture file
-- [ ] Generate fixture: `tests/fixtures/sacct_gpu_3months.txt` (anonymized
-      ~3 months of a busy cluster)
-- [ ] Add `tests/conftest.py` with `mock_sacct` fixture that patches
+- [x] Generate fixture: `tests/fixtures/sacct_3months.txt.gz` (anonymized
+      ~3 months of a busy cluster, gzip-compressed)
+- [x] Add `tests/conftest.py` with `mock_sacct` fixture that patches
       `subprocess.check_output` to return fixture data
-- [ ] Refactor existing tests to use fixture data where applicable
-- [ ] Commit: "WIP: anonymized test fixtures and mock sacct"
+- [x] Commit: "WIP: anonymized test fixtures and mock sacct"
 
 ## Phase 7: Data Acquisition Update
 
