@@ -1,7 +1,7 @@
 ---
 status: in-progress
-current_phase: 4
-last_updated: 2026-02-18
+current_phase: 6
+last_updated: 2026-03-14
 ---
 
 # sacct-plot Roadmap
@@ -71,6 +71,58 @@ from wip to main.
 - [ ] README: full usage examples, screenshots
 - [ ] Squash WIP commits and open PR against main
 
+## Phase 6: Data Acquisition Update
+
+Add `Submit` timestamp to sacct query for wait time analysis.
+
+Detailed implementation plan: <plan:bf259d9b-7dc8-4b79-b373-95d0f739bc31>
+
+- [ ] Add `Submit` to `SACCT_BASE` fields and `SACCT_FIELDS`
+- [ ] Parse `Submit` in `JobInfo.from_line()` (11 fields)
+- [ ] Include `submit` in `JobInfo.to_dict()`
+- [ ] Update test fixtures for 11-field format
+- [ ] Commit: "WIP: add Submit timestamp to sacct data"
+
+## Phase 7: `--all` Aggregate Overlay
+
+Add `--all` flag to overlay the full partition aggregate alongside grouped series.
+Requires `--by`. Fetches the full dataset (dropping the filter for the `--by`
+dimension), computes both per-group and aggregate series, and merges them.
+
+- [ ] Add `--all` CLI flag to `SacctPlotApp`
+- [ ] Implement dual-path computation in `run()` (full + filtered, merge "all" column)
+- [ ] Validate `--all` requires `--by`, emit warning otherwise
+- [ ] Unit tests: `--all` with `--by user`, interaction with `--top`
+- [ ] Commit: "WIP: --all aggregate overlay"
+
+## Phase 8: Wait Time Computation
+
+New `wait.py` module. Computes per-job wait time (start − submit) and optional
+bucketed aggregation with percentile envelope (p25, center, p75).
+
+- [ ] `src/sacct_plot/wait.py` (`compute_wait_time`, `apply_wait_bucket`)
+- [ ] Add `--wait` and `--median` CLI flags
+- [ ] Wire `--wait` mode into `SacctPlotApp.run()` with title/ylabel auto-scaling
+- [ ] Unit tests: `tests/test_wait.py` (wait computation, bucketing, grouped)
+- [ ] Commit: "WIP: wait time computation"
+
+## Phase 9: Wait Time Rendering
+
+Scatter plot for raw wait time, line chart with percentile envelope for bucketed
+mode. Scatter uses braille markers via tplot.
+
+- [ ] Add `scatter()` method to `plot_cli.Figure`
+- [ ] New `render_wait()` in `plot.py` (scatter for unbucketed, scatter + envelope for bucketed)
+- [ ] Y-axis auto-scaling (minutes / hours / days)
+- [ ] Integration tests for `--wait` mode
+- [ ] Commit: "WIP: wait time rendering"
+
+## Phase 10: Polish & v0.2 Release Prep
+
+- [ ] Update AGENTS.md with new architecture
+- [ ] Manual testing on cluster with real sacct data
+- [ ] Squash WIP commits and open PR against main
+
 ---
 
 ## Design Considerations
@@ -89,6 +141,20 @@ then pivot to wide format for overlaid plotting.
 Optional `--bucket INTERVAL` resamples the step function to a coarser grid via
 forward-fill + aggregation (default: sum; also --mean, --max, --min). This never
 expands to per-second resolution — it operates on the sparse event boundaries.
+
+### `--all` vs "other"
+
+`--all` is an *inclusive* aggregate — it shows the total across all groups, including
+the named ones. The "all" line sits above/around the individual group lines. This is
+semantically opposite to "other" (produced by `--top N`), which is the *exclusive*
+complement of the top N groups.
+
+### Wait Time Analysis
+
+Wait time (start − submit) is a per-job scalar, not a step function. Without
+`--bucket`, it renders as a scatter plot (braille markers). With `--bucket`, it
+shows both the scatter and summary envelope lines (center line + p25/p75). Default
+aggregation is median (robust to outliers); `--mean`/`--max` available as overrides.
 
 ### plot-cli Dependency
 
@@ -113,6 +179,7 @@ Please read:
 - src/sacct_plot/__init__.py for the Application class and CLI
 - src/sacct_plot/sacct.py for data acquisition
 - src/sacct_plot/sweep.py for the event sweep algorithm
+- src/sacct_plot/wait.py for wait time computation (if it exists)
 
 Check the ROADMAP.md YAML frontmatter for the current phase. Implement the next
 unchecked item(s) in the current phase, then:
