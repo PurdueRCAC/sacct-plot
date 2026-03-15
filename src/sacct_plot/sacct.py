@@ -26,7 +26,7 @@ log = Logger.default(name=__name__)
 # Sacct command configuration
 SACCT_BASE: Final[List[str]] = [
     '/usr/bin/sacct', '-aX', '-o',
-    'JobID,User,Account,QOS,NCPUS,AllocTRES,ElapsedRaw,State,Start,End',
+    'JobID,User,Account,QOS,NCPUS,AllocTRES,ElapsedRaw,State,Submit,Start,End',
     '--parsable2', '--noheader', '--duplicates', '--array',
 ]
 
@@ -42,7 +42,7 @@ SACCT_OPTIONS: Final[Dict[str, str]] = {
 
 SACCT_FIELDS: Final[List[str]] = [
     'job_id', 'user', 'account', 'qos', 'ncpus', 'alloc_tres',
-    'elapsed_raw', 'state', 'start', 'end',
+    'elapsed_raw', 'state', 'submit', 'start', 'end',
 ]
 
 # Cache configuration
@@ -84,6 +84,7 @@ class JobInfo:
     alloc_tres: str
     elapsed_raw: int
     state: str
+    submit: Optional[datetime]
     start: Optional[datetime]
     end: Optional[datetime]
 
@@ -96,8 +97,8 @@ class JobInfo:
     def from_line(cls, line: str) -> JobInfo:
         """Create a JobInfo from a pipe-delimited sacct output line."""
         parts = line.strip().split('|')
-        if len(parts) != 10:
-            raise ValueError(f'Expected 10 fields, got {len(parts)}: {line!r}')
+        if len(parts) != 11:
+            raise ValueError(f'Expected 11 fields, got {len(parts)}: {line!r}')
         return cls(
             job_id=parts[0].split('.')[0],
             user=parts[1],
@@ -107,8 +108,9 @@ class JobInfo:
             alloc_tres=parts[5],
             elapsed_raw=int(parts[6]) if parts[6] else 0,
             state=parts[7],
-            start=_parse_timestamp(parts[8]),
-            end=_parse_timestamp(parts[9]),
+            submit=_parse_timestamp(parts[8]),
+            start=_parse_timestamp(parts[9]),
+            end=_parse_timestamp(parts[10]),
         )
 
     def to_dict(self) -> dict:
@@ -122,6 +124,7 @@ class JobInfo:
             'gpus': self.gpus,
             'elapsed_raw': self.elapsed_raw,
             'state': self.state,
+            'submit': self.submit,
             'start': self.start,
             'end': self.end,
         }
@@ -170,6 +173,7 @@ class SacctData:
 
         # Ensure datetime columns
         if not data.data.empty:
+            data.data['submit'] = to_datetime(data.data['submit'])
             data.data['start'] = to_datetime(data.data['start'])
             data.data['end'] = to_datetime(data.data['end'])
 

@@ -91,11 +91,11 @@ Detailed implementation plan: <plan:bf259d9b-7dc8-4b79-b373-95d0f739bc31>
 
 Add `Submit` timestamp to sacct query for wait time analysis.
 
-- [ ] Add `Submit` to `SACCT_BASE` fields and `SACCT_FIELDS`
-- [ ] Parse `Submit` in `JobInfo.from_line()` (11 fields)
-- [ ] Include `submit` in `JobInfo.to_dict()`
-- [ ] Update test fixtures for 11-field format
-- [ ] Commit: "WIP: add Submit timestamp to sacct data"
+- [x] Add `Submit` to `SACCT_BASE` fields and `SACCT_FIELDS`
+- [x] Parse `Submit` in `JobInfo.from_line()` (11 fields)
+- [x] Include `submit` in `JobInfo.to_dict()`
+- [x] Update test fixtures for 11-field format
+- [x] Commit: "WIP: add Submit timestamp to sacct data"
 
 ## Phase 8: `--all` Aggregate Overlay
 
