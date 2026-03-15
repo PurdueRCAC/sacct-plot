@@ -69,7 +69,7 @@ from wip to main.
 
 - [x] Manual testing with real sacct data on cluster (Gautschi, Anvil)
 - [x] README: full usage examples
-- [ ] Squash WIP commits and open PR against main
+- [x] Commit: "Merge wip to main, tag v0.1.0"
 
 ## Phase 6: Test Fixtures
 
