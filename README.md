@@ -11,7 +11,7 @@ scheduler contention across accounts, users, and QOS levels.
 ## Install
 
 ```
-uv tool install .
+uv tool install git+https://github.com/PurdueRCAC/sacct-plot
 ```
 
 ## Quick Start
