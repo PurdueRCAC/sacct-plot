@@ -1,7 +1,7 @@
 ---
 status: in-progress
-current_phase: 7
-last_updated: 2026-03-15
+current_phase: 8
+last_updated: 2026-03-16
 ---
 
 # sacct-plot Roadmap
@@ -103,11 +103,11 @@ Add `--all` flag to overlay the full partition aggregate alongside grouped serie
 Requires `--by`. Fetches the full dataset (dropping the filter for the `--by`
 dimension), computes both per-group and aggregate series, and merges them.
 
-- [ ] Add `--all` CLI flag to `SacctPlotApp`
-- [ ] Implement dual-path computation in `run()` (full + filtered, merge "all" column)
-- [ ] Validate `--all` requires `--by`, emit warning otherwise
-- [ ] Unit tests: `--all` with `--by user`, interaction with `--top`
-- [ ] Commit: "WIP: --all aggregate overlay"
+- [x] Add `--all` CLI flag to `SacctPlotApp`
+- [x] Implement dual-path computation in `run()` (full + filtered, merge "all" column)
+- [x] Validate `--all` requires `--by`, emit warning otherwise
+- [x] Unit tests: `--all` with `--by user`, interaction with `--top`
+- [x] Commit: "WIP: --all aggregate overlay"
 
 ## Phase 9: Wait Time Computation
 

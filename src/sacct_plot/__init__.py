@@ -55,7 +55,7 @@ Usage:
     {PROGRAM} [-hv] [-u USER] [-A ACCOUNT] [-r PARTITION] [-q QOS] [-s STATE]
     {'':>{len(PROGRAM)}} [-S STARTTIME] [-E ENDTIME]
     {'':>{len(PROGRAM)}} [--by {{account,user,qos}}] [--gpu] [--bucket INTERVAL]
-    {'':>{len(PROGRAM)}} [--sum | --mean | --max | --min] [--cumulative] [--top N]
+    {'':>{len(PROGRAM)}} [--all] [--sum | --mean | --max | --min] [--cumulative] [--top N]
     {'':>{len(PROGRAM)}} [--stacked] [-c COLORS] [--size W,H] [--data]
     {__doc__}\
 """
@@ -79,6 +79,7 @@ Analysis:
   --gpu                        Plot GPU allocation instead of CPU.
   --bucket         INTERVAL    Resample to interval (e.g. 1h, 1d).
   --top            N           Show only top N groups; collapse rest to "other".
+  --all                        Overlay full aggregate as "all" line (requires --by).
 
 Aggregation (with --bucket):
   --sum                        Resource-hours per bucket (default).
@@ -154,6 +155,9 @@ class SacctPlotApp(Application):
 
     top: int = None
     interface.add_argument('--top', type=int, default=None)
+
+    all_groups: bool = False
+    interface.add_argument('--all', action='store_true', default=False, dest='all_groups')
 
     # Aggregation flags (mutually exclusive)
     agg: str = 'sum'
@@ -235,6 +239,25 @@ class SacctPlotApp(Application):
         if self.top and self.by:
             alloc = apply_top_n(alloc, n=self.top)
             log.debug(f'Filtered to top {self.top} groups')
+
+        # Optional --all aggregate overlay
+        if self.all_groups:
+            if not self.by:
+                log.warning('--all requires --by; ignoring')
+            else:
+                # Fetch full dataset without the by-dimension filter
+                all_options = {k: v for k, v in options.items() if k != self.by}
+                log.info('Fetching full aggregate for --all')
+                all_data = SacctData.from_sacct(**all_options)
+                all_alloc = compute_allocation(all_data.data, metric=metric, by=None)
+                if not all_alloc.empty:
+                    if self.bucket:
+                        all_alloc = apply_bucket(all_alloc, interval=self.bucket, agg=self.agg)
+                    if self.cumulative and self.bucket:
+                        all_alloc = apply_cumulative(all_alloc)
+                    # Align step functions and merge
+                    alloc['all'] = all_alloc['allocation'].reindex(alloc.index, method='ffill').fillna(0)
+                    log.debug('Merged "all" aggregate column')
 
         if self.data_mode:
             print(alloc.to_string())
