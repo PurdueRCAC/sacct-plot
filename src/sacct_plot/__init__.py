@@ -23,6 +23,7 @@ from cmdkit.logging import Logger, level_by_name, logging_styles
 # Internal libs
 from sacct_plot.sacct import SacctData
 from sacct_plot.sweep import compute_allocation, apply_bucket, apply_cumulative, apply_top_n
+from sacct_plot.wait import compute_wait_time, apply_wait_bucket, apply_wait_top_n
 from sacct_plot.plot import render
 
 
@@ -54,8 +55,8 @@ USAGE: Final[str] = f"""\
 Usage:
     {PROGRAM} [-hv] [-u USER] [-A ACCOUNT] [-r PARTITION] [-q QOS] [-s STATE]
     {'':>{len(PROGRAM)}} [-S STARTTIME] [-E ENDTIME]
-    {'':>{len(PROGRAM)}} [--by {{account,user,qos}}] [--gpu] [--bucket INTERVAL]
-    {'':>{len(PROGRAM)}} [--all] [--sum | --mean | --max | --min] [--cumulative] [--top N]
+    {'':>{len(PROGRAM)}} [--by {{account,user,qos}}] [--gpu] [--wait] [--bucket INTERVAL]
+    {'':>{len(PROGRAM)}} [--all] [--sum | --mean | --max | --min | --median] [--cumulative] [--top N]
     {'':>{len(PROGRAM)}} [--stacked] [-c COLORS] [--size W,H] [--data]
     {__doc__}\
 """
@@ -77,15 +78,17 @@ Sacct Filters:
 Analysis:
   --by             GROUP       Overlay series by {{account,user,qos}}.
   --gpu                        Plot GPU allocation instead of CPU.
+  --wait                       Analyse job wait time (start − submit) instead of allocation.
   --bucket         INTERVAL    Resample to interval (e.g. 1h, 1d).
   --top            N           Show only top N groups; collapse rest to "other".
   --all                        Overlay full aggregate as "all" line (requires --by).
 
 Aggregation (with --bucket):
-  --sum                        Resource-hours per bucket (default).
-  --mean                       Time-weighted average allocation level.
-  --max                        Peak allocation within the bucket.
+  --sum                        Resource-hours per bucket (allocation default).
+  --mean                       Time-weighted average / mean wait time.
+  --max                        Peak allocation / longest wait in the bucket.
   --min                        Minimum allocation within the bucket.
+  --median                     Median wait time per bucket (wait default).
   --cumulative                 Show running cumulative total.
 
 Formatting:
@@ -150,6 +153,9 @@ class SacctPlotApp(Application):
     gpu: bool = False
     interface.add_argument('--gpu', action='store_true', default=False)
 
+    wait: bool = False
+    interface.add_argument('--wait', action='store_true', default=False)
+
     bucket: str = None
     interface.add_argument('--bucket', type=str, default=None)
 
@@ -166,6 +172,7 @@ class SacctPlotApp(Application):
     agg_interface.add_argument('--mean', action='store_const', const='mean', dest='agg')
     agg_interface.add_argument('--max', action='store_const', const='max', dest='agg')
     agg_interface.add_argument('--min', action='store_const', const='min', dest='agg')
+    agg_interface.add_argument('--median', action='store_const', const='median', dest='agg')
 
     cumulative: bool = False
     interface.add_argument('--cumulative', action='store_true', default=False)
@@ -215,6 +222,79 @@ class SacctPlotApp(Application):
         sacct_data = SacctData.from_sacct(**options)
         log.info(f'Loaded {len(sacct_data.data)} job records')
 
+        if self.wait:
+            self._run_wait(sacct_data, options)
+        else:
+            self._run_allocation(sacct_data, options)
+
+    def _run_wait(self: SacctPlotApp, sacct_data: SacctData, options: dict) -> None:
+        """Wait time analysis mode."""
+        # Default to median for wait mode (sum is allocation default)
+        wait_agg = self.agg if self.agg in ('median', 'mean', 'max') else 'median'
+
+        wait_data = compute_wait_time(sacct_data.data, by=self.by)
+        if wait_data.empty:
+            log.warning('No valid job records for wait time analysis')
+            return
+        log.info(f'Computed wait time for {len(wait_data)} jobs')
+
+        # Optional top-N filtering on raw data
+        if self.top and self.by:
+            wait_data = apply_wait_top_n(wait_data, n=self.top, by=self.by)
+            log.debug(f'Filtered to top {self.top} groups by total wait')
+
+        # Optional bucket rollup
+        summary = None
+        if self.bucket:
+            summary = apply_wait_bucket(wait_data, self.bucket, agg=wait_agg, by=self.by)
+            result = summary['center']
+            log.debug(f'Bucketed to {self.bucket} with {wait_agg} aggregation')
+
+            # Optional --all aggregate overlay
+            if self.all_groups and self.by:
+                all_options = {k: v for k, v in options.items() if k != self.by}
+                log.info('Fetching full aggregate for --all')
+                all_data = SacctData.from_sacct(**all_options)
+                all_wait = compute_wait_time(all_data.data, by=None)
+                if not all_wait.empty:
+                    all_summary = apply_wait_bucket(all_wait, self.bucket, agg=wait_agg, by=None)
+                    result['all'] = all_summary['center']['wait'].reindex(result.index).fillna(0)
+                    log.debug('Merged "all" aggregate column')
+
+            if self.data_mode:
+                print(result.to_string())
+                return
+        else:
+            if self.all_groups:
+                log.warning('--all in wait mode requires --bucket; ignoring')
+            if self.data_mode:
+                print(wait_data.to_string())
+                return
+
+        # Build title and ylabel with auto-scaled units
+        max_wait = wait_data['wait'].max()
+        if max_wait < 120:
+            unit = 'seconds'
+        elif max_wait < 7200:
+            unit = 'minutes'
+        elif max_wait < 172800:
+            unit = 'hours'
+        else:
+            unit = 'days'
+
+        ylabel = f'Wait ({unit})'
+        if self.bucket:
+            title = f'{wait_agg.title()} Wait Time (per {self.bucket})'
+        else:
+            title = 'Job Wait Time'
+        if self.by:
+            title += f' (by {self.by})'
+
+        # Phase 10: render_wait(...)
+        log.warning(f'Wait time rendering not yet implemented: {title} [{ylabel}]')
+
+    def _run_allocation(self: SacctPlotApp, sacct_data: SacctData, options: dict) -> None:
+        """Allocation analysis mode (default)."""
         # Compute allocation time-series
         metric = 'gpu' if self.gpu else 'cpu'
         alloc = compute_allocation(sacct_data.data, metric=metric, by=self.by)

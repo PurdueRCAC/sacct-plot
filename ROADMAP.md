@@ -1,6 +1,6 @@
 ---
 status: in-progress
-current_phase: 8
+current_phase: 9
 last_updated: 2026-03-16
 ---
 
@@ -114,11 +114,11 @@ dimension), computes both per-group and aggregate series, and merges them.
 New `wait.py` module. Computes per-job wait time (start − submit) and optional
 bucketed aggregation with percentile envelope (p25, center, p75).
 
-- [ ] `src/sacct_plot/wait.py` (`compute_wait_time`, `apply_wait_bucket`)
-- [ ] Add `--wait` and `--median` CLI flags
-- [ ] Wire `--wait` mode into `SacctPlotApp.run()` with title/ylabel auto-scaling
-- [ ] Unit tests: `tests/test_wait.py` (wait computation, bucketing, grouped)
-- [ ] Commit: "WIP: wait time computation"
+- [x] `src/sacct_plot/wait.py` (`compute_wait_time`, `apply_wait_bucket`, `apply_wait_top_n`)
+- [x] Add `--wait` and `--median` CLI flags
+- [x] Wire `--wait` mode into `SacctPlotApp.run()` with title/ylabel auto-scaling
+- [x] Unit tests: `tests/test_wait.py` (wait computation, bucketing, grouped)
+- [x] Commit: "WIP: wait time computation"
 
 ## Phase 10: Wait Time Rendering
 
