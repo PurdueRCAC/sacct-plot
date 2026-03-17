@@ -119,16 +119,30 @@ def sacct_fixture_records(sacct_fixture_text: str) -> List[Tuple[str, List[str]]
     return records
 
 
+@pytest.fixture(scope='session')
+def sacct_cache_dir(tmp_path_factory) -> str:
+    """Session-scoped temp directory for sacct parquet cache.
+
+    Shared across all tests so that the first call to ``from_sacct()``
+    with a given set of filters writes a parquet file, and subsequent
+    calls with the same filters read from the cache instead of reparsing
+    the full fixture.
+    """
+    return str(tmp_path_factory.mktemp('sacct_cache'))
+
+
 @pytest.fixture
 def mock_sacct(
     sacct_fixture_records: List[Tuple[str, List[str]]],
+    sacct_cache_dir: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Patch ``subprocess.check_output`` to return filtered fixture data.
 
     Inspects the sacct command to extract filter flags and returns only
     matching records — mimicking what real ``sacct`` does server-side.
-    Also disables caching so tests always go through the mock.
+    Redirects the parquet cache to a session-scoped temp directory so
+    repeated calls with the same filters are fast.
 
     Usage::
 
@@ -147,4 +161,4 @@ def mock_sacct(
 
     import sacct_plot.sacct as sacct_module
     monkeypatch.setattr(sacct_module, 'check_output', _mock_check_output)
-    monkeypatch.setattr(sacct_module, 'CACHE_TTL', 0)  # Disable caching
+    monkeypatch.setattr(sacct_module, 'CACHE_DIR', sacct_cache_dir)

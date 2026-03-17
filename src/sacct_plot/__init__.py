@@ -252,9 +252,13 @@ class SacctPlotApp(Application):
 
             # Optional --all aggregate overlay
             if self.all_groups and self.by:
-                all_options = {k: v for k, v in options.items() if k != self.by}
-                log.info('Fetching full aggregate for --all')
-                all_data = SacctData.from_sacct(**all_options)
+                if options.get(self.by) is not None:
+                    all_options = {k: v for k, v in options.items() if k != self.by}
+                    log.info('Fetching full aggregate for --all')
+                    all_data = SacctData.from_sacct(**all_options)
+                else:
+                    log.info('Reusing dataset for --all (no filter on %s)', self.by)
+                    all_data = sacct_data
                 all_wait = compute_wait_time(all_data.data, by=None)
                 if not all_wait.empty:
                     all_summary = apply_wait_bucket(all_wait, self.bucket, agg=wait_agg, by=None)
@@ -262,13 +266,13 @@ class SacctPlotApp(Application):
                     log.debug('Merged "all" aggregate column')
 
             if self.data_mode:
-                print(result.to_string())
+                result.to_csv(sys.stdout)
                 return
         else:
             if self.all_groups:
                 log.warning('--all in wait mode requires --bucket; ignoring')
             if self.data_mode:
-                print(wait_data.to_string())
+                wait_data.to_csv(sys.stdout)
                 return
 
         # Build title and ylabel with auto-scaled units
@@ -325,10 +329,15 @@ class SacctPlotApp(Application):
             if not self.by:
                 log.warning('--all requires --by; ignoring')
             else:
-                # Fetch full dataset without the by-dimension filter
-                all_options = {k: v for k, v in options.items() if k != self.by}
-                log.info('Fetching full aggregate for --all')
-                all_data = SacctData.from_sacct(**all_options)
+                # Reuse already-fetched data when the by-dimension has no filter,
+                # otherwise fetch the full dataset without the by-dimension filter.
+                if options.get(self.by) is not None:
+                    all_options = {k: v for k, v in options.items() if k != self.by}
+                    log.info('Fetching full aggregate for --all')
+                    all_data = SacctData.from_sacct(**all_options)
+                else:
+                    log.info('Reusing dataset for --all (no filter on %s)', self.by)
+                    all_data = sacct_data
                 all_alloc = compute_allocation(all_data.data, metric=metric, by=None)
                 if not all_alloc.empty:
                     if self.bucket:
@@ -340,7 +349,7 @@ class SacctPlotApp(Application):
                     log.debug('Merged "all" aggregate column')
 
         if self.data_mode:
-            print(alloc.to_string())
+            alloc.to_csv(sys.stdout)
             return
 
         # Build title and labels
