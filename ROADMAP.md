@@ -1,7 +1,7 @@
 ---
 status: in-progress
-current_phase: 9
-last_updated: 2026-03-16
+current_phase: 10
+last_updated: 2026-03-20
 ---
 
 # sacct-plot Roadmap
@@ -125,11 +125,11 @@ bucketed aggregation with percentile envelope (p25, center, p75).
 Scatter plot for raw wait time, line chart with percentile envelope for bucketed
 mode. Scatter uses braille markers via tplot.
 
-- [ ] Add `scatter()` method to `plot_cli.Figure`
-- [ ] New `render_wait()` in `plot.py` (scatter for unbucketed, scatter + envelope for bucketed)
-- [ ] Y-axis auto-scaling (minutes / hours / days)
-- [ ] Integration tests for `--wait` mode
-- [ ] Commit: "WIP: wait time rendering"
+- [x] Add `scatter()` method to `plot_cli.Figure`
+- [x] New `render_wait()` in `plot.py` (scatter for unbucketed, scatter + envelope for bucketed)
+- [x] Y-axis auto-scaling (minutes / hours / days)
+- [x] Integration tests for `--wait` mode
+- [x] Commit: "WIP: wait time rendering"
 
 ## Phase 11: Polish & v0.2 Release Prep
 

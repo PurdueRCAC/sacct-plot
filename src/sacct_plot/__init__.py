@@ -24,7 +24,7 @@ from cmdkit.logging import Logger, level_by_name, logging_styles
 from sacct_plot.sacct import SacctData
 from sacct_plot.sweep import compute_allocation, apply_bucket, apply_cumulative, apply_top_n
 from sacct_plot.wait import compute_wait_time, apply_wait_bucket, apply_wait_top_n
-from sacct_plot.plot import render
+from sacct_plot.plot import render, render_wait
 
 
 # Public interface
@@ -294,8 +294,17 @@ class SacctPlotApp(Application):
         if self.by:
             title += f' (by {self.by})'
 
-        # Phase 10: render_wait(...)
-        log.warning(f'Wait time rendering not yet implemented: {title} [{ylabel}]')
+        render_wait(
+            wait_data=wait_data,
+            summary=summary,
+            unit=unit,
+            title=title,
+            ylabel=ylabel,
+            by=self.by,
+            colors=self.colors,
+            size=self.size,
+            legend=self.legend,
+        )
 
     def _run_allocation(self: SacctPlotApp, sacct_data: SacctData, options: dict) -> None:
         """Allocation analysis mode (default)."""
